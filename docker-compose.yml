@@ -1,0 +1,63 @@
+services:
+  nextcloud-redis:
+    image: redis:7-alpine
+    container_name: nextcloud-redis
+    networks:
+      - appnet
+    restart: unless-stopped
+
+  nextcloud:
+    image: nextcloud:29-apache
+    container_name: nextcloud
+    ports:
+      - "${NEXTCLOUD_PORT:-8081}:80"  # 로컬 테스트용 포트
+    environment:
+      # PostgreSQL 설정 (기존 pg-local 컨테이너 사용)
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      
+      # Redis 설정 (성능 향상)
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_HOST_PORT: ${REDIS_HOST_PORT:-6379}
+      
+      # NextCloud 설정
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
+      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS}
+      
+      # 로컬 환경 설정
+      OVERWRITEPROTOCOL: ${OVERWRITEPROTOCOL}
+      OVERWRITEHOST: ${OVERWRITEHOST}
+      
+      TZ: ${TZ:-Asia/Seoul}
+    
+    volumes:
+      - nextcloud-data:/var/www/html
+      # 로컬 파일 저장소 (선택사항 - 호스트와 동기화하려면)
+      # - ./nextcloud-files:/var/www/html/data
+    
+    depends_on:
+      - nextcloud-redis
+    
+    networks:
+      - appnet
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/status.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  appnet:
+    external: true
+
+volumes:
+  nextcloud-data:
+    name: nextcloud-data
+
