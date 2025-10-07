@@ -9,8 +9,8 @@ services:
   nextcloud:
     image: nextcloud:29-apache
     container_name: nextcloud
-    ports:
-      - "${NEXTCLOUD_PORT:-8081}:80"  # 로컬 테스트용 포트
+    expose:
+      - "80"
     environment:
       # PostgreSQL 설정 (기존 pg-local 컨테이너 사용)
       POSTGRES_HOST: ${POSTGRES_HOST}
@@ -27,9 +27,12 @@ services:
       NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
       NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS}
       
-      # 로컬 환경 설정
-      OVERWRITEPROTOCOL: ${OVERWRITEPROTOCOL}
+      # Nginx 프록시 설정
+      OVERWRITEPROTOCOL: ${OVERWRITEPROTOCOL:-https}
       OVERWRITEHOST: ${OVERWRITEHOST}
+      OVERWRITECLIURL: ${OVERWRITECLIURL}
+      OVERWRITEWEBROOT: ${OVERWRITEWEBROOT:-}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-172.16.0.0/12}
       
       TZ: ${TZ:-Asia/Seoul}
     
@@ -43,6 +46,7 @@ services:
     
     networks:
       - appnet
+      - nginx-network
     
     restart: unless-stopped
     
@@ -56,6 +60,9 @@ services:
 networks:
   appnet:
     external: true
+  nginx-network:
+    external: true
+    name: nginx-network
 
 volumes:
   nextcloud-data:
